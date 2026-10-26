@@ -1,0 +1,28 @@
+{
+    "cameraName": "",
+    "cameraWidth": 1920,
+    "cameraHeight": 1080,
+    "cameraFps": 30,
+    "mirrorHorizontal": false,
+    "triggerMessages": [
+        "FIRE",
+        "SHOOT"
+    ],
+    "offsetSeconds": 0.5569999814033508,
+    "durationSeconds": 1.1180000305175782,
+    "autoAlign": true,
+    "motionLeadSeconds": 1.1950000524520875,
+    "motionThreshold": 3.0,
+    "motionSearchSeconds": 2.0,
+    "motionArea": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 1.0
+    },
+    "repeatCount": 3,
+    "playbackSpeed": 0.5,
+    "saveClip": false,
+    "saveFolder": "",
+    "jpgQuality": 90
+}
