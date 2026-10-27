@@ -22,6 +22,8 @@
     },
     "repeatCount": 3,
     "playbackSpeed": 0.5,
+    "idleVideoFolder": "Idle",
+    "idleTimeoutSeconds": 30.0,
     "saveClip": false,
     "saveFolder": "",
     "jpgQuality": 90

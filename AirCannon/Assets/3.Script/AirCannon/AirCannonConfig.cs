@@ -55,6 +55,12 @@ public class AirCannonConfig
     // 재생 배속. 0.5 = 0.5배속 슬로모션, 1 = 원래 속도
     public float playbackSpeed = 0.5f;
 
+    // 대기 화면에서 무한 반복할 영상 폴더 (StreamingAssets 기준). 파일 이름은 따지지 않고 폴더 안 영상 하나를 쓴다.
+    // 영상이 없으면 검은 화면만 보인다.
+    public string idleVideoFolder = "Idle";
+    // 리플레이 화면에서 마지막 입력(키, 마우스, 터치, 발사 신호) 후 이 시간(초)이 지나면 대기 화면으로 돌아간다. 0이면 사용 안 함
+    public float idleTimeoutSeconds = 30f;
+
     // 클립을 JPG 연속 이미지로 저장할지 여부 (기본 꺼짐)
     public bool saveClip = false;
     // 저장 폴더. 비우면 persistentDataPath/Clips
@@ -111,6 +117,8 @@ public class AirCannonConfig
         motionArea.width = Mathf.Clamp(motionArea.width, 0.01f, 1f - motionArea.x);
         motionArea.height = Mathf.Clamp(motionArea.height, 0.01f, 1f - motionArea.y);
         jpgQuality = Mathf.Clamp(jpgQuality, 1, 100);
+        idleTimeoutSeconds = Mathf.Clamp(idleTimeoutSeconds, 0f, 600f);
+        idleVideoFolder ??= "";
         triggerMessages ??= new List<string>();
         if (triggerMessages.Count == 0)
             Debug.LogWarning("[AirCannon] triggerMessages가 비어 있음 - 시리얼 발사 신호를 받지 않음");

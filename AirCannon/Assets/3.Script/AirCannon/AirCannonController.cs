@@ -37,6 +37,9 @@ public class AirCannonController : MonoBehaviour
     private AirCannonConfig config;
     private readonly ReplayClip clip = new ReplayClip();
     private bool isCapturing;
+    private double lastInputTime;
+    private Vector3 lastMousePosition;
+    private bool wasReplaying;
     private SerialPortManager serial;
 
     private void Awake()
@@ -87,6 +90,10 @@ public class AirCannonController : MonoBehaviour
 
     private void Update()
     {
+        if (HasUserInput())
+            lastInputTime = Time.realtimeSinceStartupAsDouble;
+        CheckIdleTimeout();
+
         if (IsTypingInInputField()) return;
 
         if (testFireKey != KeyCode.None && Input.GetKeyDown(testFireKey))
@@ -94,6 +101,36 @@ public class AirCannonController : MonoBehaviour
 
         if (calibrator != null && calibrationKey != KeyCode.None && Input.GetKeyDown(calibrationKey))
             ToggleCalibration();
+    }
+
+    private bool HasUserInput()
+    {
+        // 화면 밖(다른 모니터)에서 움직인 마우스는 관람객 입력으로 보지 않는다.
+        Vector3 mouse = Input.mousePosition;
+        bool inside = mouse.x >= 0 && mouse.y >= 0 && mouse.x <= Screen.width && mouse.y <= Screen.height;
+        bool moved = inside && mouse != lastMousePosition;
+        lastMousePosition = mouse;
+        return moved || Input.anyKey || Input.touchCount > 0 || Input.mouseScrollDelta != Vector2.zero;
+    }
+
+    // 리플레이 화면에서 입력 없이 idleTimeoutSeconds가 지나면 리플레이를 닫고 대기 화면(대기 영상)으로 돌아간다.
+    // 캡처 중(장치 동작을 기다리는 동안)과 보정 화면(운영자 화면)은 제외한다.
+    private void CheckIdleTimeout()
+    {
+        // 리플레이가 새로 뜬 순간부터 센다 (보정 미리보기 등 어디서 재생했든 같게).
+        bool replaying = clipPlayer.IsPlaying;
+        if (replaying && !wasReplaying)
+            lastInputTime = Time.realtimeSinceStartupAsDouble;
+        wasReplaying = replaying;
+
+        if (config.idleTimeoutSeconds <= 0f || !clipPlayer.IsPlaying || isCapturing) return;
+        if (calibrator != null && calibrator.IsOpen) return;
+
+        double idle = Time.realtimeSinceStartupAsDouble - lastInputTime;
+        if (idle < config.idleTimeoutSeconds) return;
+
+        clipPlayer.Stop();
+        Report($"무입력 {config.idleTimeoutSeconds:0}초 - 리플레이 닫고 대기 화면 복귀");
     }
 
     // 설정창에서 config 값을 바꾼 뒤 호출한다. 범위를 다시 맞추고, 버퍼 크기와 웹캠 요청값에 반영하고, aircannon.json에 저장한다.
@@ -151,6 +188,7 @@ public class AirCannonController : MonoBehaviour
         }
 
         double fireTime = Time.realtimeSinceStartupAsDouble;
+        lastInputTime = fireTime;
         Report($"발사 인식 ({source})");
         StartCoroutine(CaptureRoutine(fireTime));
     }
