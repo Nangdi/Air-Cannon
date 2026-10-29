@@ -4,6 +4,7 @@ using UnityEngine;
 // 웹캠 영상을 최근 몇 초만큼 계속 덮어쓰며 GPU 메모리에 보관한다.
 // 웹캠이 없거나 끊기면 일정 간격으로 다시 연결을 시도한다.
 // 보정 모드에서는 해상도를 낮추는 대신 더 긴 시간을 보관한다.
+// 복사할 때 cameraRotation만큼 돌려서 저장한다 (90/270이면 가로 웹캠 영상이 세로 프레임이 된다).
 public class WebcamRingBuffer : MonoBehaviour
 {
     private const float RetryIntervalSeconds = 3f;
@@ -11,9 +12,11 @@ public class WebcamRingBuffer : MonoBehaviour
     private const float BufferMarginSeconds = 0.5f; // 캡처 대기 시간 여유분
     private const float FpsHeadroom = 1.25f;        // 요청보다 빠르게 들어오는 카메라 대비
     private const float CalibrationScale = 0.5f;    // 보정 모드 해상도 배율
+    private const string RotateShaderPath = "Shaders/WebcamRotateBlit"; // Resources 기준
 
     private AirCannonConfig config;
     private WebCamTexture webcam;
+    private Material rotateMaterial;
     private RenderTexture[] frames;
     private double[] times;
     private int normalCapacity;
@@ -122,12 +125,25 @@ public class WebcamRingBuffer : MonoBehaviour
             return;
         }
 
-        EnsureFrames(Mathf.Max(16, Mathf.RoundToInt(webcam.width * resolutionScale)),
-                     Mathf.Max(16, Mathf.RoundToInt(webcam.height * resolutionScale)));
+        int quarterTurns = config.cameraRotation / 90;
+        bool sideways = quarterTurns % 2 == 1;
+        int width = Mathf.Max(16, Mathf.RoundToInt(webcam.width * resolutionScale));
+        int height = Mathf.Max(16, Mathf.RoundToInt(webcam.height * resolutionScale));
+        EnsureFrames(sideways ? height : width, sideways ? width : height);
 
-        Vector2 scale = new Vector2(config.mirrorHorizontal ? -1f : 1f, webcam.videoVerticallyMirrored ? -1f : 1f);
-        Vector2 offset = new Vector2(config.mirrorHorizontal ? 1f : 0f, webcam.videoVerticallyMirrored ? 1f : 0f);
-        Graphics.Blit(webcam, frames[head], scale, offset);
+        if (quarterTurns != 0 && GetRotateMaterial() is Material material)
+        {
+            material.SetFloat("_Rotation", quarterTurns);
+            material.SetFloat("_MirrorX", config.mirrorHorizontal ? 1f : 0f);
+            material.SetFloat("_FlipSourceY", webcam.videoVerticallyMirrored ? 1f : 0f);
+            Graphics.Blit(webcam, frames[head], material);
+        }
+        else
+        {
+            Vector2 scale = new Vector2(config.mirrorHorizontal ? -1f : 1f, webcam.videoVerticallyMirrored ? -1f : 1f);
+            Vector2 offset = new Vector2(config.mirrorHorizontal ? 1f : 0f, webcam.videoVerticallyMirrored ? 1f : 0f);
+            Graphics.Blit(webcam, frames[head], scale, offset);
+        }
 
         lastFrameTime = Time.realtimeSinceStartupAsDouble;
         times[head] = lastFrameTime;
@@ -174,6 +190,22 @@ public class WebcamRingBuffer : MonoBehaviour
             outTimes.Add(t);
         }
         return outFrames.Count;
+    }
+
+    // 셰이더를 못 찾으면 null - 회전 없이 복사한다 (프레임 크기는 회전 기준이라 늘어나 보인다).
+    private Material GetRotateMaterial()
+    {
+        if (rotateMaterial != null) return rotateMaterial;
+
+        Shader shader = Resources.Load<Shader>(RotateShaderPath);
+        if (shader == null || !shader.isSupported)
+        {
+            Debug.LogError($"[AirCannon] 회전 셰이더 없음 (Resources/{RotateShaderPath}) - 회전 없이 복사");
+            config.cameraRotation = 0;
+            return null;
+        }
+        rotateMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+        return rotateMaterial;
     }
 
     private bool IsStalled()
@@ -287,5 +319,6 @@ public class WebcamRingBuffer : MonoBehaviour
         StopWebcam();
         ReleaseFrames();
         motion.Dispose();
+        if (rotateMaterial != null) Destroy(rotateMaterial);
     }
 }

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 // 리플레이 타이밍 보정 화면 (F2).
 // 발사하면 신호 전 PreSeconds ~ 후 PostSeconds를 녹화해 멈추고, 프레임 단위로 넘겨 보며
-// 잘라낼 구간(시작/끝)을 정해 aircannon.json에 저장한다.
+// 잘라낼 구간(시작/끝)을 정해 aircannon.json에 저장한다. 편집 중에 다시 발사하면 그 신호 이후를 새로 녹화해 편집한다.
 // 그래프에는 프레임별 움직임 점수, 감도(임계값), 신호 시점, 움직임 시작 시점, 최근 발들의 움직임 시작 시점을 그린다.
 public class ReplayCalibrator : MonoBehaviour
 {
@@ -143,7 +143,7 @@ public class ReplayCalibrator : MonoBehaviour
 
     private void OnEnable()
     {
-        HotkeyRegistry.Register(this, "발사 신호 / 테스트 발사 키", "녹화 시작 (신호 전 1초 ~ 후 5초)", HelpScope);
+        HotkeyRegistry.Register(this, "발사 신호 / 테스트 발사 키", "녹화 시작 (신호 전 1초 ~ 후 5초, 편집 중이면 신호 이후를 새로 녹화)", HelpScope);
         HotkeyRegistry.Register(this, AutoAlignKey.ToString(), "자동 맞춤 켜기/끄기", HelpScope);
         HotkeyRegistry.Register(this, $"{ThresholdDownKey} / {ThresholdUpKey}", "감도 낮추기 / 높이기", HelpScope);
         HotkeyRegistry.Register(this, "← / →", "1프레임 이동 (꾹 누르면 계속, Shift 10프레임) - 편집 중", HelpScope);
@@ -210,9 +210,9 @@ public class ReplayCalibrator : MonoBehaviour
 
     public void OnFire(double time, string source)
     {
-        if (state != State.Live)
+        if (state == State.Recording)
         {
-            Report($"보정: 무시-{(state == State.Recording ? "녹화" : "편집")} 중 ({source}). 다시 찍으려면 R", true);
+            Report($"보정: 무시-녹화 중 ({source})", true);
             return;
         }
         if (!ringBuffer.IsRunning)
@@ -221,10 +221,21 @@ public class ReplayCalibrator : MonoBehaviour
             return;
         }
 
+        // 편집 중에 신호가 오면 지금 편집 중인 녹화본(저장 안 한 구간)은 버리고 새로 녹화한다.
+        // 편집하는 동안 버퍼를 멈춰 두었으므로 신호 이전 장면은 거의 없고 신호 이후만 담긴다.
+        bool fromEditing = state == State.Editing;
+        if (fromEditing)
+        {
+            previewing = false;
+            frames.Clear();
+            frameTimes.Clear();
+            ringBuffer.Frozen = false;
+        }
+
         fireTime = time;
         state = State.Recording;
         RefreshButtons();
-        Report($"보정: 발사 인식 ({source}) - {PostSeconds:F0}초 녹화");
+        Report($"보정: 발사 인식 ({source}) - {PostSeconds:F0}초 녹화" + (fromEditing ? " (편집 중이던 녹화본은 버림, 신호 이후만 녹화)" : ""));
     }
 
     private void Update()
@@ -396,7 +407,7 @@ public class ReplayCalibrator : MonoBehaviour
         }
 
         ShowTexture(frames[playheadIndex]);
-        SetText(statusText, "편집 - ←/→ 1프레임 (꾹 누르면 계속, Shift 10프레임), I 시작점, O 끝점, P 미리보기, Enter 저장, R 다시 촬영");
+        SetText(statusText, "편집 - ←/→ 1프레임 (꾹 누르면 계속, Shift 10프레임), I 시작점, O 끝점, P 미리보기, Enter 저장, R 다시 촬영, 발사 신호 → 새로 녹화");
 
         double onset = FindOnset();
         DrawGraph(fireTime - PreSeconds, fireTime + PostSeconds, fireTime, onset,

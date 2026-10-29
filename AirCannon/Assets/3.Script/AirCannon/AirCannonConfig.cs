@@ -28,6 +28,8 @@ public class AirCannonConfig
     public int cameraFps = 30;
     // 좌우 반전 (거울처럼 보이게 할 때)
     public bool mirrorHorizontal = false;
+    // 웹캠 영상 회전 (시계 방향, 0/90/180/270). 가로 웹캠을 세로로 세워 달았을 때 90 또는 270
+    public int cameraRotation = 90;
 
     // 이 문자열 중 하나와 같으면 발사로 본다 (대소문자 무시, 앞뒤 공백 무시).
     // 어느 RS232 포트(controllerId)로 들어와도 똑같이 받는다.
@@ -106,6 +108,7 @@ public class AirCannonConfig
         cameraWidth = Mathf.Max(16, cameraWidth);
         cameraHeight = Mathf.Max(16, cameraHeight);
         cameraFps = Mathf.Clamp(cameraFps, 1, 240);
+        cameraRotation = ((Mathf.RoundToInt(cameraRotation / 90f) % 4 + 4) % 4) * 90;
         durationSeconds = Mathf.Clamp(durationSeconds, 0.1f, 10f);
         repeatCount = Mathf.Max(0, repeatCount);
         playbackSpeed = Mathf.Clamp(playbackSpeed, 0.05f, 4f);

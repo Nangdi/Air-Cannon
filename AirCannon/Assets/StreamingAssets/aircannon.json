@@ -4,6 +4,7 @@
     "cameraHeight": 1080,
     "cameraFps": 30,
     "mirrorHorizontal": false,
+    "cameraRotation": 90,
     "triggerMessages": [
         "FIRE",
         "SHOOT"

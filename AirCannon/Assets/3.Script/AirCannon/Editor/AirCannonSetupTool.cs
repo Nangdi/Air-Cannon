@@ -10,7 +10,9 @@ public static class AirCannonSetupTool
 {
     private const string RootName = "AirCannon";
     private const string CanvasName = "Canvas_Replay";
-    private static readonly Vector2 ReferenceResolution = new Vector2(1920, 1080);
+    // 세로 모니터(2160x3840) 기준
+    private static readonly Vector2 ReferenceResolution = new Vector2(1080, 1920);
+    private const float ContentWidth = 1000f;
     private static readonly Color BackgroundColor = Color.black;
 
     // 보정 화면
@@ -128,13 +130,13 @@ public static class AirCannonSetupTool
 
         var title = CreateText("Title", panel, uiLayer, bold, 40, TextColor, TextAlignmentOptions.MidlineLeft,
                                "리플레이 타이밍 보정  <size=60%>(F2 닫기)</size>");
-        Place(title.rectTransform, new Vector2(0, 505), new Vector2(1800, 56));
+        Place(title.rectTransform, new Vector2(0, 885), new Vector2(ContentWidth, 56));
 
         var status = CreateText("Status", panel, uiLayer, medium, 24, SubTextColor, TextAlignmentOptions.MidlineLeft, "발사 대기 중");
-        Place(status.rectTransform, new Vector2(0, 460), new Vector2(1800, 36));
+        Place(status.rectTransform, new Vector2(0, 840), new Vector2(ContentWidth, 36));
 
         var previewArea = CreateChild("PreviewArea", panel, uiLayer);
-        Place(previewArea, new Vector2(0, 145), new Vector2(1067, 580));
+        Place(previewArea, new Vector2(0, 290), new Vector2(ContentWidth, 1040));
         var previewBg = previewArea.gameObject.AddComponent<Image>();
         previewBg.color = Color.black;
         previewBg.raycastTarget = false;
@@ -147,14 +149,14 @@ public static class AirCannonSetupTool
         previewFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
         previewFitter.aspectRatio = ReferenceResolution.x / ReferenceResolution.y;
 
-        var legend = CreateText("Legend", panel, uiLayer, medium, 18, SubTextColor, TextAlignmentOptions.MidlineRight,
+        var legend = CreateText("Legend", panel, uiLayer, medium, 21, SubTextColor, TextAlignmentOptions.TopLeft,
                                 "<color=#FFFFFF>흰 선</color> 신호   <color=#FFBF33>주황 선</color> 움직임 시작   " +
                                 "<color=#4DF280>초록 선</color> 재생 위치   <color=#F24D4D>빨간 선</color> 감도   " +
                                 "<color=#5C8FE6>파란 영역</color> 잘라낼 구간   점선 움직임 찾는 범위 끝");
-        Place(legend.rectTransform, new Vector2(0, -158), new Vector2(1600, 24));
+        Place(legend.rectTransform, new Vector2(0, -282), new Vector2(ContentWidth, 56));
 
         var graphRt = CreateChild("Graph", panel, uiLayer);
-        Place(graphRt, new Vector2(0, -245), new Vector2(1600, 150));
+        Place(graphRt, new Vector2(0, -420), new Vector2(ContentWidth, 200));
         var graph = graphRt.gameObject.AddComponent<RawImage>();
         graph.raycastTarget = false;
 
@@ -168,23 +170,23 @@ public static class AirCannonSetupTool
         sliderGo.name = "Slider_Playhead";
         sliderGo.transform.SetParent(panel, false);
         SetLayerRecursive(sliderGo, uiLayer);
-        Place((RectTransform)sliderGo.transform, new Vector2(0, -345), new Vector2(1600, 30));
+        Place((RectTransform)sliderGo.transform, new Vector2(0, -548), new Vector2(ContentWidth, 30));
         var slider = sliderGo.GetComponent<Slider>();
         slider.wholeNumbers = true;
 
-        var info = CreateText("Info", panel, uiLayer, medium, 19, TextColor, TextAlignmentOptions.TopLeft, "");
-        info.enableWordWrapping = false;
+        var info = CreateText("Info", panel, uiLayer, medium, 22, TextColor, TextAlignmentOptions.TopLeft, "");
         info.overflowMode = TextOverflowModes.Ellipsis;
-        Place(info.rectTransform, new Vector2(0, -420), new Vector2(1600, 112));
+        Place(info.rectTransform, new Vector2(0, -665), new Vector2(ContentWidth, 190));
 
         var group = CreateChild("Group_Buttons", panel, uiLayer);
-        Place(group, new Vector2(0, -505), new Vector2(1600, 54));
-        var layout = group.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 12;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = true;
+        // 버튼 9개 - 세로 화면 폭에는 한 줄로 안 들어가서 5열 2줄
+        Place(group, new Vector2(0, -830), new Vector2(ContentWidth, 118));
+        var layout = group.gameObject.AddComponent<GridLayoutGroup>();
+        layout.cellSize = new Vector2(192, 54);
+        layout.spacing = new Vector2(10, 10);
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = 5;
+        layout.childAlignment = TextAnchor.UpperCenter;
 
         var setStart = CreateButton("Button_SetStart", group, uiLayer, bold, resources.standard, CardColor, "시작점 (I)", out _);
         var setEnd = CreateButton("Button_SetEnd", group, uiLayer, bold, resources.standard, CardColor, "끝점 (O)", out _);
